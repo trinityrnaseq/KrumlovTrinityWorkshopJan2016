@@ -228,6 +228,9 @@ close $ofh; # samples.txt
 eval {
     &process_cmd("cd edgeR", "$checkpoints_dir/cd.edgeR.ok");
 };
+if ($@) {
+    system("touch $checkpoints_dir/cd.edgeR.ok");
+}
 
 # now do it in the script. :)
 chdir("edgeR") or die "Error, could not cd to edgeR/"; 
