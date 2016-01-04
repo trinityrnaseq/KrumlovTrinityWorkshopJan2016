@@ -14,14 +14,11 @@ BLASTX_PROG=blastx
 BLASTP_PROG=blastp
 SIGNALP_PROG=/seq/regev_genome_portal/SOFTWARE/SIGNALP/signalp-4.0/signalp
 TMHMM_PROG=/seq/regev_genome_portal/SOFTWARE/TMHMM/TMHMM2.0c/bin/tmhmm
-RNAMMER_TRANS_PROG=/home/unix/bhaas/GITHUB/Trinotate/util/rnammer_support/RnammerTranscriptome.pl
-RNAMMER=/seq/regev_genome_portal/SOFTWARE/RNAMMER/rnammer
 
 
 # dbs
 SWISSPROT_PEP=/seq/RNASEQ/DBs/SWISSPROT/current/uniprot_sprot.pep
 PFAM_DB=/seq/RNASEQ/DBs/PFAM/current/Pfam-A.hmm
-#TRINOTATE_BOILERPLATE_URL=ftp://ftp.broadinstitute.org/pub/Trinity/Trinotate_v2.0_RESOURCES/Trinotate.sprot_uniref90.20150131.boilerplate.sqlite.gz
 TRINOTATE_BOILERPLATE_URL=https://data.broadinstitute.org/Trinity/Trinotate_v2.0_RESOURCES/Trinotate.sprot_uniref90.20150131.boilerplate.sqlite.gz
 
 

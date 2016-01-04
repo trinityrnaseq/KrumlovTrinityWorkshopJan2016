@@ -46,8 +46,11 @@ $ENV{PATH} .= ":$trinity_dir";  ## adding it to our PATH setting.
 
 my $trinotate_dir = $ENV{TRINOTATE_HOME} or die "Error, need env var TRINOTATE_HOME set to Trinotate installation directory (note this is different than Trinity) ";
 
+my $trinotate_conf_file = "$FindBin::Bin/conf.txt";
 
 my $OS_type = `uname`;
+
+my $workdir = cwd();
 
 ## first check for tools needed.
 
@@ -89,7 +92,7 @@ my @tools = qw (Trinity
     }
 }
 
-my $checkpoints_dir = $FindBin::Bin . "/__TrinDemo_checkpoints_dir";
+my $checkpoints_dir = $workdir . "/__TrinDemo_checkpoints_dir";
 unless (-d $checkpoints_dir) {
     mkdir $checkpoints_dir or die "Error, cannot mkdir $checkpoints_dir";
 }
@@ -230,16 +233,7 @@ close $ofh; # samples.txt
 &show("edgeR/Trinity_trans.counts.matrix.GSNO_vs_WT.edgeR.DE_results.MA_n_Volcano.pdf");
 
 
-eval {
-    &process_cmd("cd edgeR", "$checkpoints_dir/cd.edgeR.ok");
-};
-if ($@) {
-    system("touch $checkpoints_dir/cd.edgeR.ok");
-}
-
-# now do it in the script. :)
-chdir("edgeR") or die "Error, could not cd to edgeR/"; 
-print STDERR "\n ** Note: if you see an error message above about not being able to cd, just ignore it... it's a weird behavior of this demo script. Rest assured we've 'cd edgeR' just fine.   :)\n\n";
+&changedir("edgeR", "$checkpoints_dir/cd.edgeR.ok");
 
 &process_cmd("$trinity_dir/Analysis/DifferentialExpression/analyze_diff_expr.pl --matrix ../Trinity_trans.TMM.EXPR.matrix --samples ../samples.txt -P 1e-3 -C 2",
              "$checkpoints_dir/analyze_diff_expr.ok");
@@ -251,9 +245,33 @@ print STDERR "\n ** Note: if you see an error message above about not being able
 
 &process_cmd("$trinity_dir/Analysis/DifferentialExpression/define_clusters_by_cutting_tree.pl --Ptree 60 -R diffExpr.P1e-3_C2.matrix.RData",
              "$checkpoints_dir/cut_clusters_tree.ok");
+
 &show("diffExpr.P1e-3_C2.matrix.RData.clusters_fixed_P_60/my_cluster_plots.pdf");
 
-print STDERR "\n\n\tDemo complete.  Congratulations!  :)\n\n\n\n";
+
+#########################
+## Time now for Trinotate
+#########################
+
+&changedir("../", "$checkpoints_dir/cd_back_to_wd_after_edgeR.ok");
+
+
+&run_Trinotate_demo();
+
+################
+## GO enrichment 
+################
+
+&changedir("../edgeR", "$checkpoints_dir/cd_back_to_edgeR_after_trinotate.ok");
+
+## need sequence lengths file
+&process_cmd("$trinity_dir/util/misc/fasta_seq_length.pl ../trinity_out_dir/Trinity.fasta > Trinity.seqLengths", "$checkpoints_dir/trin_seqlengths.ok");
+
+&process_cmd("$trinity_dir/Analysis/DifferentialExpression/run_GOseq.pl --genes_single_factor Trinity_trans.counts.matrix.GSNO_vs_WT.edgeR.DE_results.P1e-3_C2.GSNO-UP.subset --GO_assignments ../Trinotate/Trinotate.xls.gene_ontology --lengths Trinity.seqLengths");
+
+&process_cmd("$trinity_dir/Analysis/DifferentialExpression/run_GOseq.pl --genes_single_factor Trinity_trans.counts.matrix.GSNO_vs_WT.edgeR.DE_results.P1e-3_C2.WT-UP.subset --GO_assignments ../Trinotate/Trinotate.xls.gene_ontology --lengths Trinity.seqLengths");
+
+print STDERR "\n\n\tCommand-line Demo complete.  Congratulations! :)  Now explore your data via TrinotateWeb\n\n\n\n";
 
 
 exit(0);
@@ -348,3 +366,95 @@ sub get_fq_files_listings {
 }
 
 
+####
+sub changedir {
+    my ($dest_dir, $checkpoint) = @_;
+
+    
+    eval {
+        &process_cmd("cd $dest_dir", $checkpoint);
+    };
+    if ($@) {
+        print STDERR "\n ** Note: if you see an error message above about not being able to cd, just ignore it... it's a weird behavior of this demo script. Rest assured we've \'cd $dest_dir\' just fine.   :)\n\n";
+        system("touch $checkpoint");
+    }
+
+    # now do it in the script. :)
+    chdir("$dest_dir") or die "Error, could not cd to $dest_dir"; 
+ 
+    return;
+}
+
+####
+sub run_Trinotate_demo {
+   
+    &process_cmd("mkdir Trinotate", "$checkpoints_dir/mkdir_Trinotate.ok");
+
+    &changedir("Trinotate", "$checkpoints_dir/cd_Trinotate.ok");
+    
+    &process_cmd("ln -s ../trinity_out_dir/Trinity.fasta", "$checkpoints_dir/symlink_trinity_fasta.ok");
+    
+    my $ini_reader = new IniReader($trinotate_conf_file);
+    
+    my @sections = $ini_reader->get_section_headings();
+    @sections = grep { $_ ne 'GLOBALS' } @sections;
+
+    my %globals = $ini_reader->get_section_hash('GLOBALS');
+    $globals{TRANSCRIPTS_FASTA} = "Trinity.fasta";
+    $globals{GENE_TO_TRANS_MAP} = "../trinity_out_dir/Trinity.fasta.gene_trans_map";
+    $globals{CPU} = 2;
+    $globals{TRINOTATE_HOME} = $trinotate_dir;
+    
+    ## get command structs
+    my @cmd_structs;
+    foreach my $section (@sections) {
+        my %keyvals = $ini_reader->get_section_hash($section);
+        $keyvals{__SECTION__} = $section;
+        
+        if ($keyvals{RUN} =~ /^T/i) {
+            push (@cmd_structs, \%keyvals);
+        }
+    }
+
+    @cmd_structs = sort {$a->{RANK}<=>$b->{RANK}} @cmd_structs;
+
+    foreach my $cmd_struct (@cmd_structs) {
+        my $CMD = $cmd_struct->{CMD};
+        $CMD = &substitute_tokens($CMD, \%globals);
+        
+        my $section_name = $cmd_struct->{__SECTION__};
+        my $checkpoint_file = "$checkpoints_dir/Trinotate.$section_name.ok";
+        
+        &process_cmd($CMD, $checkpoint_file);
+        
+    }
+    
+    return;
+}
+
+####
+sub substitute_tokens {
+    my ($cmd, $globals_href) = @_;
+
+    my %token_templates;
+    while ($cmd =~ /(\{__\S+__\})/g) {
+        my $token_template = $1;
+        
+        $token_templates{$token_template}++;
+    }
+
+    if (%token_templates) {
+        foreach my $token_template (keys %token_templates) {
+            $token_template =~ /\{__(\S+)__\}/ or die "Error, not able to parse token template: $token_template";
+            my $token_name = $1;
+
+            my $replacement_val = $globals_href->{$token_name};
+            unless (defined $replacement_val) {
+                die "Error, unable to identify global value for token name: $token_name of cmd: $cmd";
+            }
+            $cmd =~ s/$token_template/$replacement_val/g;
+        }
+    }
+
+    return($cmd);
+}
