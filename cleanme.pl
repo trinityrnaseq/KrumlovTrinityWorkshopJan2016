@@ -40,8 +40,10 @@ foreach my $file (<*>) {
 `rm -rf ./trinity_out_dir`;
 `rm -rf ./edgeR`;
 `rm -rf ./__TrinDemo_checkpoints_dir`;
+`rm -rf ./Trinotate`;
 
 `rm -f ./data/*fastq`;
 `rm -f ./data/*readcount`;
+
 
 exit(0);
