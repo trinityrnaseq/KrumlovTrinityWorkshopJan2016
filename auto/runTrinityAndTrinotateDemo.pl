@@ -6,6 +6,9 @@ use File::Basename;
 use FindBin;
 use Cwd;
 
+use lib ("$FindBin::Bin/PerlLib");
+use IniReader;
+
 use Getopt::Long qw(:config no_ignore_case bundling pass_through);
 
 
@@ -40,6 +43,8 @@ if ($help_flag) {
 
 my $trinity_dir = $ENV{TRINITY_HOME} or die "Error, need env var TRINITY_HOME set to Trinity installation directory";
 $ENV{PATH} .= ":$trinity_dir";  ## adding it to our PATH setting.
+
+my $trinotate_dir = $ENV{TRINOTATE_HOME} or die "Error, need env var TRINOTATE_HOME set to Trinotate installation directory (note this is different than Trinity) ";
 
 
 my $OS_type = `uname`;
