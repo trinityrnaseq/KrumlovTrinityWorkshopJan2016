@@ -17,9 +17,9 @@ TMHMM_PROG=/seq/regev_genome_portal/SOFTWARE/TMHMM/TMHMM2.0c/bin/tmhmm
 
 
 # dbs
-SWISSPROT_PEP=/seq/RNASEQ/DBs/SWISSPROT/current/uniprot_sprot.pep
+SWISSPROT_PEP=../data/mini_sprot.pep
 PFAM_DB=/seq/RNASEQ/DBs/PFAM/current/Pfam-A.hmm
-TRINOTATE_BOILERPLATE_URL=https://data.broadinstitute.org/Trinity/Trinotate_v2.0_RESOURCES/Trinotate.sprot_uniref90.20150131.boilerplate.sqlite.gz
+TRINOTATE_BOILERPLATE=../data/Trinotate.sprot_uniref90.20150131.boilerplate.sqlite
 
 
 ####################
@@ -81,7 +81,7 @@ CMD={__RNAMMER_TRANS_PROG__} --transcriptome {__TRANSCRIPTS_FASTA__} --path_to_r
 [TRINOTATE_WGET]
 RANK=1000
 RUN=T
-CMD=wget "{__TRINOTATE_BOILERPLATE_URL__}" -O Trinotate.sqlite.gz && gunzip Trinotate.sqlite.gz
+CMD=cp {__TRINOTATE_BOILERPLATE__} Trinotate.sqlite
 
 [TRINOTATE_INIT]
 RANK=1100

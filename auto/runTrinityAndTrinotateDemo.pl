@@ -84,6 +84,7 @@ my @tools = qw (Trinity
         my $unzipped_file = $file;
         $unzipped_file =~ s/\.gz//;
         unless (-s $unzipped_file) {
+            print STDERR "-unzipping $file\n";
             my $ret = system("gunzip -c $file > $unzipped_file");
             if ($ret) {
                 die "Error, could not gunzip file $file";
@@ -233,7 +234,7 @@ close $ofh; # samples.txt
 &show("edgeR/Trinity_trans.counts.matrix.GSNO_vs_WT.edgeR.DE_results.MA_n_Volcano.pdf");
 
 
-&changedir("edgeR", "$checkpoints_dir/cd.edgeR.ok");
+&change_dir("edgeR", "$checkpoints_dir/cd.edgeR.ok");
 
 &process_cmd("$trinity_dir/Analysis/DifferentialExpression/analyze_diff_expr.pl --matrix ../Trinity_trans.TMM.EXPR.matrix --samples ../samples.txt -P 1e-3 -C 2",
              "$checkpoints_dir/analyze_diff_expr.ok");
@@ -253,16 +254,16 @@ close $ofh; # samples.txt
 ## Time now for Trinotate
 #########################
 
-&changedir("../", "$checkpoints_dir/cd_back_to_wd_after_edgeR.ok");
+&change_dir("../", "$checkpoints_dir/cd_back_to_wd_after_edgeR.ok");
 
 
-&run_Trinotate_demo();
+&run_Trinotate_demo(); # cd's into Trinotate
 
 ################
 ## GO enrichment 
 ################
 
-&changedir("../edgeR", "$checkpoints_dir/cd_back_to_edgeR_after_trinotate.ok");
+&change_dir("../edgeR", "$checkpoints_dir/cd_back_to_edgeR_after_trinotate.ok");
 
 ## need sequence lengths file
 &process_cmd("$trinity_dir/util/misc/fasta_seq_length.pl ../trinity_out_dir/Trinity.fasta > Trinity.seqLengths", "$checkpoints_dir/trin_seqlengths.ok");
@@ -270,6 +271,22 @@ close $ofh; # samples.txt
 &process_cmd("$trinity_dir/Analysis/DifferentialExpression/run_GOseq.pl --genes_single_factor Trinity_trans.counts.matrix.GSNO_vs_WT.edgeR.DE_results.P1e-3_C2.GSNO-UP.subset --GO_assignments ../Trinotate/Trinotate.xls.gene_ontology --lengths Trinity.seqLengths", "$checkpoints_dir/go_seq_gsno.ok");
 
 &process_cmd("$trinity_dir/Analysis/DifferentialExpression/run_GOseq.pl --genes_single_factor Trinity_trans.counts.matrix.GSNO_vs_WT.edgeR.DE_results.P1e-3_C2.WT-UP.subset --GO_assignments ../Trinotate/Trinotate.xls.gene_ontology --lengths Trinity.seqLengths", "$checkpoints_dir/go_seq_wt.ok");
+
+
+#######################################
+## Prep TrinotateWeb w/ Expression Data
+#######################################
+
+&change_dir("../Trinotate", "$checkpoints_dir/cd_back_to_Trinotate_from_edgeR.ok");
+
+&process_cmd("$trinotate_dir/util/transcript_expression/import_expression_and_DE_results.pl --sqlite Trinotate.sqlite --transcript_mode --samples_file ../samples.txt --count_matrix ../Trinity_trans.counts.matrix --fpkm_matrix ../Trinity_trans.TMM.EXPR.matrix",
+             "$checkpoints_dir/Trinotate.load_expr_data.ok");
+
+&process_cmd("$trinotate_dir/util/transcript_expression/import_expression_and_DE_results.pl --sqlite Trinotate.sqlite --transcript_mode --samples_file ../samples.txt --DE_dir ../edgeR",
+    "$checkpoints_dir/Trinotate.load_DE_data.ok");
+
+&process_cmd("$trinotate_dir/util/transcript_expression/import_transcript_clusters.pl --sqlite Trinotate.sqlite --group_name DE_all_vs_all --analysis_name diffExpr.P1e-3_C2.matrix.RData.clusters_fixed_P_60 ../edgeR/diffExpr.P1e-3_C2.matrix.RData.clusters_fixed_P_60/*matrix",
+             "$checkpoints_dir/Trinotate.load_expr_clusters.ok");
 
 print STDERR "\n\n\tCommand-line Demo complete.  Congratulations! :)  Now explore your data via TrinotateWeb\n\n\n\n";
 
@@ -367,7 +384,7 @@ sub get_fq_files_listings {
 
 
 ####
-sub changedir {
+sub change_dir {
     my ($dest_dir, $checkpoint) = @_;
 
     
@@ -390,7 +407,7 @@ sub run_Trinotate_demo {
    
     &process_cmd("mkdir Trinotate", "$checkpoints_dir/mkdir_Trinotate.ok");
 
-    &changedir("Trinotate", "$checkpoints_dir/cd_Trinotate.ok");
+    &change_dir("Trinotate", "$checkpoints_dir/cd_Trinotate.ok");
     
     &process_cmd("ln -s ../trinity_out_dir/Trinity.fasta", "$checkpoints_dir/symlink_trinity_fasta.ok");
     
