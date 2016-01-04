@@ -267,9 +267,9 @@ close $ofh; # samples.txt
 ## need sequence lengths file
 &process_cmd("$trinity_dir/util/misc/fasta_seq_length.pl ../trinity_out_dir/Trinity.fasta > Trinity.seqLengths", "$checkpoints_dir/trin_seqlengths.ok");
 
-&process_cmd("$trinity_dir/Analysis/DifferentialExpression/run_GOseq.pl --genes_single_factor Trinity_trans.counts.matrix.GSNO_vs_WT.edgeR.DE_results.P1e-3_C2.GSNO-UP.subset --GO_assignments ../Trinotate/Trinotate.xls.gene_ontology --lengths Trinity.seqLengths");
+&process_cmd("$trinity_dir/Analysis/DifferentialExpression/run_GOseq.pl --genes_single_factor Trinity_trans.counts.matrix.GSNO_vs_WT.edgeR.DE_results.P1e-3_C2.GSNO-UP.subset --GO_assignments ../Trinotate/Trinotate.xls.gene_ontology --lengths Trinity.seqLengths", "$checkpoints_dir/go_seq_gsno.ok");
 
-&process_cmd("$trinity_dir/Analysis/DifferentialExpression/run_GOseq.pl --genes_single_factor Trinity_trans.counts.matrix.GSNO_vs_WT.edgeR.DE_results.P1e-3_C2.WT-UP.subset --GO_assignments ../Trinotate/Trinotate.xls.gene_ontology --lengths Trinity.seqLengths");
+&process_cmd("$trinity_dir/Analysis/DifferentialExpression/run_GOseq.pl --genes_single_factor Trinity_trans.counts.matrix.GSNO_vs_WT.edgeR.DE_results.P1e-3_C2.WT-UP.subset --GO_assignments ../Trinotate/Trinotate.xls.gene_ontology --lengths Trinity.seqLengths", "$checkpoints_dir/go_seq_wt.ok");
 
 print STDERR "\n\n\tCommand-line Demo complete.  Congratulations! :)  Now explore your data via TrinotateWeb\n\n\n\n";
 

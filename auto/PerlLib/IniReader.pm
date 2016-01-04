@@ -32,7 +32,7 @@ sub new {
     $conf_text =~ s/ +/ /g;
     
     
-    print "CONF_TEXT:\n$conf_text\n";
+    #print "CONF_TEXT:\n$conf_text\n";
     
     my $current_section = "";
     
@@ -42,7 +42,7 @@ sub new {
         if ($line =~ /^\[([^\]]+)\]/) {
             $current_section = $1;
             $current_section = &_trim_flank_ws($current_section);
-            print STDERR "Got section: $current_section\n";
+            #print STDERR "Got section: $current_section\n";
         }
         elsif ($line =~ /^(.*)=(.*)$/) {
             my $att = $1;
