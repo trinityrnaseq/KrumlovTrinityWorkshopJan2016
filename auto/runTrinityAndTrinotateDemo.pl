@@ -211,8 +211,12 @@ close $ofh; # samples.txt
 &show("ExN50.stats.plot.pdf");
 
 ## Examine read alignments in IGV
-&process_cmd("igv.sh -g trinity_out_dir/Trinity.fasta " . join(",", @bam_files), "$checkpoints_dir/igv_trinity_reads.ok");
 
+my $igv_cmd = "igv.sh -g trinity_out_dir/Trinity.fasta " . join(",", @bam_files);
+if ($AUTO_MODE) {
+    $igv_cmd .= " & ";
+}
+&process_cmd($igv_cmd, "$checkpoints_dir/igv_trinity_reads.ok");
 
 
 ##############
