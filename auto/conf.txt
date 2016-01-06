@@ -9,7 +9,7 @@
 [GLOBALS]
 
 # progs
-TRANSDECODER_DIR=/home/unix/bhaas/GITHUB/TransDecoder
+TRANSDECODER_DIR=/home/genomics/.programs/TransDecoder
 BLASTX_PROG=blastx
 BLASTP_PROG=blastp
 SIGNALP_PROG=/seq/regev_genome_portal/SOFTWARE/SIGNALP/signalp-4.0/signalp
