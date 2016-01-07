@@ -12,14 +12,14 @@
 TRANSDECODER_DIR=/home/genomics/.programs/TransDecoder
 BLASTX_PROG=blastx
 BLASTP_PROG=blastp
-SIGNALP_PROG=/seq/regev_genome_portal/SOFTWARE/SIGNALP/signalp-4.0/signalp
-TMHMM_PROG=/seq/regev_genome_portal/SOFTWARE/TMHMM/TMHMM2.0c/bin/tmhmm
+SIGNALP_PROG=signalp
+TMHMM_PROG=tmhmm
 
 
 # dbs
 SWISSPROT_PEP=../data/mini_sprot.pep
-PFAM_DB=/seq/RNASEQ/DBs/PFAM/current/Pfam-A.hmm
-TRINOTATE_BOILERPLATE=../data/Trinotate.sprot_uniref90.20150131.boilerplate.sqlite
+PFAM_DB=/home/genomics/workshop_data/transcriptomics/trinnotate_databases/Pfam-A.hmm
+TRINOTATE_BOILERPLATE=/home/genomics/workshop_data/transcriptomics/trinnotate_databases/Trinotate.sqlite
 
 
 ####################
