@@ -19,7 +19,7 @@ TMHMM_PROG=tmhmm
 # dbs
 SWISSPROT_PEP=../data/mini_sprot.pep
 PFAM_DB=/home/genomics/workshop_data/transcriptomics/trinnotate_databases/Pfam-A.hmm
-TRINOTATE_BOILERPLATE=/home/genomics/workshop_data/transcriptomics/trinnotate_databases/Trinotate.sqlite
+TRINOTATE_BOILERPLATE=../Trinotate.sqlite
 
 
 ####################
@@ -81,7 +81,7 @@ CMD={__RNAMMER_TRANS_PROG__} --transcriptome {__TRANSCRIPTS_FASTA__} --path_to_r
 [TRINOTATE_WGET]
 RANK=1000
 RUN=T
-CMD=cp {__TRINOTATE_BOILERPLATE__} Trinotate.sqlite
+CMD=ln -s ../Trinotate.sqlite
 
 [TRINOTATE_INIT]
 RANK=1100
