@@ -12,11 +12,17 @@ use IniReader;
 use Getopt::Long qw(:config no_ignore_case bundling pass_through);
 
 
+my $trinotate_conf_file = "$FindBin::Bin/conf.txt";
+
 my $usage = <<__EOUSAGE__;
 
 #################################################################################
 #
+#  Optional:
+#
 #  --autopilot         automatically run the pipeline end-to-end
+#
+#  --conf <string>     configuration file to use.  Default: $trinotate_conf_file
 #
 #################################################################################
 
@@ -33,6 +39,8 @@ my $AUTO_MODE = 0;
 &GetOptions( 'help|h' => \$help_flag,
              'autopilot' => \$AUTO_MODE,
              
+             'conf=s' => \$trinotate_conf_file,
+             
     );
 
 if ($help_flag) {
@@ -40,13 +48,16 @@ if ($help_flag) {
 }
 
 
+unless ($trinotate_conf_file =~ m|^/|) {
+    $trinotate_conf_file = cwd() . "/$trinotate_conf_file";
+}
 
 my $trinity_dir = $ENV{TRINITY_HOME} or die "Error, need env var TRINITY_HOME set to Trinity installation directory";
 $ENV{PATH} .= ":$trinity_dir";  ## adding it to our PATH setting.
 
 my $trinotate_dir = $ENV{TRINOTATE_HOME} or die "Error, need env var TRINOTATE_HOME set to Trinotate installation directory (note this is different than Trinity) ";
 
-my $trinotate_conf_file = "$FindBin::Bin/conf.txt";
+
 
 my $OS_type = `uname`;
 
@@ -423,7 +434,7 @@ sub run_Trinotate_demo {
     my %globals = $ini_reader->get_section_hash('GLOBALS');
     $globals{TRANSCRIPTS_FASTA} = "Trinity.fasta";
     $globals{GENE_TO_TRANS_MAP} = "../trinity_out_dir/Trinity.fasta.gene_trans_map";
-    $globals{CPU} = 2;
+    $globals{CPU} = 4;
     $globals{TRINOTATE_HOME} = $trinotate_dir;
     
     ## get command structs
