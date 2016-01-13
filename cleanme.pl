@@ -44,7 +44,6 @@ foreach my $file (<*>) {
 `rm -rf ./__TrinDemo_checkpoints_dir`;
 `rm -rf ./Trinotate`;
 `rm -rf ./bowtie_out`;
-`rm -f ./data/*fastq`;
 `rm -f ./data/*readcount`;
 
 

@@ -118,7 +118,6 @@ my %samples = (
 
 my $STEP_COUNT = 0; # incremented at each process_cmd
 
-&process_cmd("gunzip -q data/*gz", "$checkpoints_dir/gunzip_data.ok");
 
 ##############
 # run Trinity.
