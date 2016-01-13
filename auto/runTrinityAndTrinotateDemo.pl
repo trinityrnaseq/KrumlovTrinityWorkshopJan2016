@@ -88,22 +88,6 @@ my @tools = qw (Trinity
 }
 
 
-
-{ 
-    ## unzip the gzipped files.
-    foreach my $file (<data/*.gz>) {
-        my $unzipped_file = $file;
-        $unzipped_file =~ s/\.gz//;
-        unless (-s $unzipped_file) {
-            print STDERR "-unzipping $file\n";
-            my $ret = system("gunzip -c $file > $unzipped_file");
-            if ($ret) {
-                die "Error, could not gunzip file $file";
-            }
-        }
-    }
-}
-
 my $checkpoints_dir = $workdir . "/__TrinDemo_checkpoints_dir";
 unless (-d $checkpoints_dir) {
     mkdir $checkpoints_dir or die "Error, cannot mkdir $checkpoints_dir";
@@ -132,6 +116,10 @@ my %samples = (
     );
 
 
+my $STEP_COUNT = 0; # incremented at each process_cmd
+
+&process_cmd("gunzip data/*gz", "$checkpoints_dir/gunzip_data.ok");
+
 ##############
 # run Trinity.
 
@@ -145,14 +133,33 @@ my $run_Trinity_cmd = "$trinity_dir/Trinity --seqType fq "
 
 &process_cmd($run_Trinity_cmd, "$checkpoints_dir/trinity.ok");
 
-# count the number of transcripts assembled.
-&process_cmd("grep '>' trinity_out_dir/Trinity.fasta | wc -l ", "$checkpoints_dir/count_trans.ok");
-
 # Examine top of Trinity.fasta file
 &process_cmd("head trinity_out_dir/Trinity.fasta", "$checkpoints_dir/head_trinity.ok");
 
+# count the number of transcripts assembled.
+&process_cmd("grep '>' trinity_out_dir/Trinity.fasta | wc -l ", "$checkpoints_dir/count_trans.ok");
+
+
 # Get Trinity stats:
 &process_cmd("$trinity_dir/util/TrinityStats.pl trinity_out_dir/Trinity.fasta", "$checkpoints_dir/trin_stats.ok");
+
+
+## representation of reads by the assembly
+&process_cmd("$TRINITY_HOME/util/bowtie_PE_separate_then_join.pl --target trinity_out_dir/Trinity.fasta --seqType fq --left data/wt_SRR1582651_1.fastq --right data/wt_SRR1582651_2.fastq --aligner bowtie -- -p 2 --all --best --strata -m 300", 
+             "$checkpoints_dir/bowtie_PE_sep_join.ok");
+
+&process_cmd("ls -ltr bowtie_out/", "$checkpoints_dir/ls_bowtie_outdir.ok"); 
+
+&process_cmd("$TRINITY_HOME/util/SAM_nameSorted_to_uniq_count_stats.pl bowtie_out/bowtie_out.nameSorted.bam",
+             "$checkpoints_dir/nameSorted_sam_stats.ok");
+
+
+###########################################
+## assess number of full-length transcripts
+
+&process_cmd("blastx -query trinity_out_dir/Trinity.fasta -db data/mini_sprot.pep -out blastx.outfmt6 -evalue 1e-20 -num_threads 2 -max_target_seqs 1 -outfmt 6", "$checkpoints_dir/blastx_for_full_length.ok");
+
+&process_cmd("$TRINITY_HOME/util/analyze_blastPlus_topHit_coverage.pl blastx.outfmt6 trinity_out_dir/Trinity.fasta data/mini_sprot.pep", "$checkpoints_dir/tophat_blast_cov_stats.ok");
 
 
 ###################################
@@ -162,9 +169,12 @@ my $run_Trinity_cmd = "$trinity_dir/Trinity --seqType fq "
 # also, write the samples.txt file
 
 open (my $ofh, ">samples.txt") or die "Error, cannot write to file samples.txt";
-my @rsem_result_files;
+my @rsem_trans_result_files;
+my @rsem_gene_result_files;
 my @bam_files;
 
+
+my $first_round = 1;
 foreach my $condition (sort keys %samples) {
     
     my $samples_href = $samples{$condition};
@@ -179,8 +189,11 @@ foreach my $condition (sort keys %samples) {
         
         my $output_dir = "$sample.RSEM";
         
-        my $rsem_result_file = "$output_dir/$sample.isoforms.results";
-        push (@rsem_result_files, $rsem_result_file);
+        my $rsem_trans_result_file = "$output_dir/$sample.isoforms.results";
+        push (@rsem_trans_result_files, $rsem_trans_result_file);
+        
+        my $rsem_gene_result_file = "$output_dir/$sample.genes.results";
+        push (@rsem_gene_result_files, $rsem_gene_result_file);
         
         
         my $align_estimate_command = "$trinity_dir/util/align_and_estimate_abundance.pl --seqType fq "
@@ -194,8 +207,13 @@ foreach my $condition (sort keys %samples) {
         
         push (@bam_files, "$output_dir/$sample.bowtie.csorted.bam");
         
-        # look at the output
-        &process_cmd("head $rsem_result_file", "$checkpoints_dir/head.$sample.rsem.ok");
+        if ($first_round) {
+            # look at the output
+            &process_cmd("head $rsem_trans_result_file", "$checkpoints_dir/head.$sample.rsem.trans.ok");
+            
+            &process_cmd("head $rsem_gene_result_file", "$checkpoints_dir/head.$sample.rsem.genes.ok");
+            
+        }
     }
     
     
@@ -203,13 +221,18 @@ foreach my $condition (sort keys %samples) {
 close $ofh; # samples.txt
 
 ## generate matrix of counts and perform TMM normalization
-&process_cmd("$trinity_dir/util/abundance_estimates_to_matrix.pl --est_method RSEM --out_prefix Trinity_trans @rsem_result_files", "$checkpoints_dir/counts_matrix.ok");
+&process_cmd("$trinity_dir/util/abundance_estimates_to_matrix.pl --est_method RSEM --out_prefix Trinity_trans @rsem_trans_result_files", "$checkpoints_dir/trans_matrices.ok");
 
 ## Look at the counts matrix
 &process_cmd("head -n20 Trinity_trans.counts.matrix", "$checkpoints_dir/head.counts.matrix.ok");
 
 ## Look at the expression matrix:
 &process_cmd("head -n20 Trinity_trans.TMM.EXPR.matrix", "$checkpoints_dir/head.expr.matrix.ok");
+
+# make the gene matrices
+&process_cmd("$TRINITY_HOME/util/abundance_estimates_to_matrix.pl --est_method RSEM --out_prefix Trinity_genes @rsem_gene_result_files", "$checkpoints_dir/gene_matrices.ok");
+
+&process_cmd("ls -1 | grep gene | grep matrix", "$checkpoints_dir/ls_gene_matrices.ok");
 
 ## Examine the E90N50 statistic
 &process_cmd("$trinity_dir//util/misc/contig_ExN50_statistic.pl  Trinity_trans.TMM.EXPR.matrix trinity_out_dir/Trinity.fasta > ExN50.stats", "$checkpoints_dir/ExNstats.ok");
@@ -237,19 +260,20 @@ if ($AUTO_MODE) {
 ## make a samples file
 &process_cmd("cat samples.txt", "$checkpoints_dir/examine_samples_txt.ok");
 
+&process_cmd("cat -te samples.txt", "$checkpoitns_dir/example_samples_txt_cat_te.ok");
+
 ## run edgeR
 &process_cmd("$trinity_dir/Analysis/DifferentialExpression/run_DE_analysis.pl --matrix Trinity_trans.counts.matrix --samples_file samples.txt --method edgeR --output edgeR", "$checkpoints_dir/run.edgeR.ok");
 
 # take a look at what edgeR generated:
-&process_cmd("ls -ltr edgeR/", "$checkpoints_dir/ls.edgeR.dir.ok");
+&process_cmd("ls -ltr edgeR_trans/", "$checkpoints_dir/ls.edgeR_trans.dir.ok");
 
 
-&process_cmd("head edgeR/Trinity_trans.counts.matrix.GSNO_vs_WT.edgeR.DE_results", "$checkpoints_dir/head.edgeR.DE_results.ok");
+&process_cmd("head edgeR_trans/Trinity_trans.counts.matrix.GSNO_vs_WT.edgeR.DE_results", "$checkpoints_dir/head.edgeR_trans.DE_results.ok");
 
-&show("edgeR/Trinity_trans.counts.matrix.GSNO_vs_WT.edgeR.DE_results.MA_n_Volcano.pdf");
+&show("edge_transR/Trinity_trans.counts.matrix.GSNO_vs_WT.edgeR.DE_results.MA_n_Volcano.pdf");
 
-
-&change_dir("edgeR", "$checkpoints_dir/cd.edgeR.ok");
+&change_dir("edgeR_trans", "$checkpoints_dir/cd.edgeR.ok");
 
 &process_cmd("$trinity_dir/Analysis/DifferentialExpression/analyze_diff_expr.pl --matrix ../Trinity_trans.TMM.EXPR.matrix --samples ../samples.txt -P 1e-3 -C 2",
              "$checkpoints_dir/analyze_diff_expr.ok");
@@ -265,11 +289,19 @@ if ($AUTO_MODE) {
 &show("diffExpr.P1e-3_C2.matrix.RData.clusters_fixed_P_60/my_cluster_plots.pdf");
 
 
+## Now run the DE analysis for the genes
+
+&change_dir("../", "$checkpoints_dir/cd_back_to_wd_after_edgeR.ok");
+
+&process_cmd("$TRINITY_HOME/Analysis/DifferentialExpression/run_DE_analysis.pl --matrix Trinity_genes.counts.matrix --samples_file samples.txt  --method edgeR --output edgeR_gene", "$checkpoints_dir/gene_DE_analysis.ok");
+
+&process_cmd("ls -ltr edgeR_gene/", "$checkpoints_dir/ls_edgeR_gene_dir.ok");
+
 #########################
 ## Time now for Trinotate
 #########################
 
-&change_dir("../", "$checkpoints_dir/cd_back_to_wd_after_edgeR.ok");
+&run_cmd("pwd", "$checkpoints_dir/ensure_pwd_pre_Trinotate.ok");
 
 
 &run_Trinotate_demo(); # cd's into Trinotate
@@ -278,7 +310,7 @@ if ($AUTO_MODE) {
 ## GO enrichment 
 ################
 
-&change_dir("../edgeR", "$checkpoints_dir/cd_back_to_edgeR_after_trinotate.ok");
+&change_dir("../edgeR_trans", "$checkpoints_dir/cd_back_to_edgeR_after_trinotate.ok");
 
 ## need sequence lengths file
 &process_cmd("$trinity_dir/util/misc/fasta_seq_length.pl ../trinity_out_dir/Trinity.fasta > Trinity.seqLengths", "$checkpoints_dir/trin_seqlengths.ok");
@@ -295,13 +327,20 @@ if ($AUTO_MODE) {
 &change_dir("../Trinotate", "$checkpoints_dir/cd_back_to_Trinotate_from_edgeR.ok");
 
 &process_cmd("$trinotate_dir/util/transcript_expression/import_expression_and_DE_results.pl --sqlite Trinotate.sqlite --transcript_mode --samples_file ../samples.txt --count_matrix ../Trinity_trans.counts.matrix --fpkm_matrix ../Trinity_trans.TMM.EXPR.matrix",
-             "$checkpoints_dir/Trinotate.load_expr_data.ok");
+             "$checkpoints_dir/Trinotate.load_trans_expr_data.ok");
 
-&process_cmd("$trinotate_dir/util/transcript_expression/import_expression_and_DE_results.pl --sqlite Trinotate.sqlite --transcript_mode --samples_file ../samples.txt --DE_dir ../edgeR",
-    "$checkpoints_dir/Trinotate.load_DE_data.ok");
+&process_cmd("$trinotate_dir/util/transcript_expression/import_expression_and_DE_results.pl --sqlite Trinotate.sqlite --transcript_mode --samples_file ../samples.txt --DE_dir ../edgeR_trans",
+    "$checkpoints_dir/Trinotate.load_trans_DE_data.ok");
 
-&process_cmd("$trinotate_dir/util/transcript_expression/import_transcript_clusters.pl --sqlite Trinotate.sqlite --group_name DE_all_vs_all --analysis_name diffExpr.P1e-3_C2.matrix.RData.clusters_fixed_P_60 ../edgeR/diffExpr.P1e-3_C2.matrix.RData.clusters_fixed_P_60/*matrix",
+&process_cmd("$trinotate_dir/util/transcript_expression/import_transcript_clusters.pl --sqlite Trinotate.sqlite --group_name DE_all_vs_all --analysis_name diffExpr.P1e-3_C2.matrix.RData.clusters_fixed_P_60 ../edgeR_trans/diffExpr.P1e-3_C2.matrix.RData.clusters_fixed_P_60/*matrix",
              "$checkpoints_dir/Trinotate.load_expr_clusters.ok");
+
+# load in the gene results
+
+&process_cmd("$TRINOTATE_HOME/util/transcript_expression/import_expression_and_DE_results.pl  --sqlite ../Trinotate.sqlite --component_mode  --samples_file ../samples.txt --count_matrix ../Trinity_genes.counts.matrix --fpkm_matrix ../Trinity_genes.TMM.EXPR.matrix", "$checkpoints_dir/Trinotate.load_gene_expr_data.ok");
+
+&process_cmd("$TRINOTATE_HOME/util/transcript_expression/import_expression_and_DE_results.pl --sqlite ../Trinotate.sqlite --component_mode  --samples_file ../samples.txt --DE_dir ../edgeR_gene ", "$checkpoints_dir/Trinotate.load_gene_DE_data.ok");
+
 
 print STDERR "\n\n\tCommand-line Demo complete.  Congratulations! :)  Now explore your data via TrinotateWeb\n\n\n\n";
 
@@ -316,6 +355,10 @@ sub process_cmd {
         die "Error, need checkpoint file defined";
     }
     
+    $STEP_COUNT++;
+    $checkpoint .= "s_" . sprintf("%02i", $STEP_COUNT);
+    
+
     if (-e $checkpoint) { return; }
 
     
@@ -424,17 +467,15 @@ sub run_Trinotate_demo {
 
     &change_dir("Trinotate", "$checkpoints_dir/cd_Trinotate.ok");
     
-    &process_cmd("ln -s ../trinity_out_dir/Trinity.fasta", "$checkpoints_dir/symlink_trinity_fasta.ok");
-    
     my $ini_reader = new IniReader($trinotate_conf_file);
     
     my @sections = $ini_reader->get_section_headings();
     @sections = grep { $_ ne 'GLOBALS' } @sections;
 
     my %globals = $ini_reader->get_section_hash('GLOBALS');
-    $globals{TRANSCRIPTS_FASTA} = "Trinity.fasta";
+    $globals{TRANSCRIPTS_FASTA} = "../trinity_out_dir/Trinity.fasta";
     $globals{GENE_TO_TRANS_MAP} = "../trinity_out_dir/Trinity.fasta.gene_trans_map";
-    $globals{CPU} = 4;
+    $globals{CPU} = 2;
     $globals{TRINOTATE_HOME} = $trinotate_dir;
     
     ## get command structs

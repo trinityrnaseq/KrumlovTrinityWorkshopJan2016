@@ -37,6 +37,16 @@ RANK=101
 RUN=T
 CMD={__TRANSDECODER_DIR__}/TransDecoder.Predict -t {__TRANSCRIPTS_FASTA__} --cpu {__CPU__}
 
+[TRANSDECODER_PREDICT_LS]
+RANK=102
+RUN=T
+CMD=ls -1 |grep transdecoder
+
+[TRANSDECODER_VIEW_PEP]
+RANK=103
+RUN=T
+CMD=head Trinity.fasta.transdecoder.pep
+
 
 [BLASTX_TRANS]
 RANK=200
