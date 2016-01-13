@@ -118,7 +118,7 @@ my %samples = (
 
 my $STEP_COUNT = 0; # incremented at each process_cmd
 
-&process_cmd("gunzip data/*gz", "$checkpoints_dir/gunzip_data.ok");
+&process_cmd("gunzip -q data/*gz", "$checkpoints_dir/gunzip_data.ok");
 
 ##############
 # run Trinity.
@@ -145,12 +145,12 @@ my $run_Trinity_cmd = "$trinity_dir/Trinity --seqType fq "
 
 
 ## representation of reads by the assembly
-&process_cmd("$TRINITY_HOME/util/bowtie_PE_separate_then_join.pl --target trinity_out_dir/Trinity.fasta --seqType fq --left data/wt_SRR1582651_1.fastq --right data/wt_SRR1582651_2.fastq --aligner bowtie -- -p 2 --all --best --strata -m 300", 
+&process_cmd("$trinity_dir/util/bowtie_PE_separate_then_join.pl --target trinity_out_dir/Trinity.fasta --seqType fq --left data/wt_SRR1582651_1.fastq --right data/wt_SRR1582651_2.fastq --aligner bowtie -- -p 2 --all --best --strata -m 300", 
              "$checkpoints_dir/bowtie_PE_sep_join.ok");
 
 &process_cmd("ls -ltr bowtie_out/", "$checkpoints_dir/ls_bowtie_outdir.ok"); 
 
-&process_cmd("$TRINITY_HOME/util/SAM_nameSorted_to_uniq_count_stats.pl bowtie_out/bowtie_out.nameSorted.bam",
+&process_cmd("$trinity_dir/util/SAM_nameSorted_to_uniq_count_stats.pl bowtie_out/bowtie_out.nameSorted.bam",
              "$checkpoints_dir/nameSorted_sam_stats.ok");
 
 
@@ -159,7 +159,7 @@ my $run_Trinity_cmd = "$trinity_dir/Trinity --seqType fq "
 
 &process_cmd("blastx -query trinity_out_dir/Trinity.fasta -db data/mini_sprot.pep -out blastx.outfmt6 -evalue 1e-20 -num_threads 2 -max_target_seqs 1 -outfmt 6", "$checkpoints_dir/blastx_for_full_length.ok");
 
-&process_cmd("$TRINITY_HOME/util/analyze_blastPlus_topHit_coverage.pl blastx.outfmt6 trinity_out_dir/Trinity.fasta data/mini_sprot.pep", "$checkpoints_dir/tophat_blast_cov_stats.ok");
+&process_cmd("$trinity_dir/util/analyze_blastPlus_topHit_coverage.pl blastx.outfmt6 trinity_out_dir/Trinity.fasta data/mini_sprot.pep", "$checkpoints_dir/tophat_blast_cov_stats.ok");
 
 
 ###################################
@@ -230,7 +230,7 @@ close $ofh; # samples.txt
 &process_cmd("head -n20 Trinity_trans.TMM.EXPR.matrix", "$checkpoints_dir/head.expr.matrix.ok");
 
 # make the gene matrices
-&process_cmd("$TRINITY_HOME/util/abundance_estimates_to_matrix.pl --est_method RSEM --out_prefix Trinity_genes @rsem_gene_result_files", "$checkpoints_dir/gene_matrices.ok");
+&process_cmd("$trinity_dir/util/abundance_estimates_to_matrix.pl --est_method RSEM --out_prefix Trinity_genes @rsem_gene_result_files", "$checkpoints_dir/gene_matrices.ok");
 
 &process_cmd("ls -1 | grep gene | grep matrix", "$checkpoints_dir/ls_gene_matrices.ok");
 
@@ -260,7 +260,7 @@ if ($AUTO_MODE) {
 ## make a samples file
 &process_cmd("cat samples.txt", "$checkpoints_dir/examine_samples_txt.ok");
 
-&process_cmd("cat -te samples.txt", "$checkpoitns_dir/example_samples_txt_cat_te.ok");
+&process_cmd("cat -te samples.txt", "$checkpoints_dir/example_samples_txt_cat_te.ok");
 
 ## run edgeR
 &process_cmd("$trinity_dir/Analysis/DifferentialExpression/run_DE_analysis.pl --matrix Trinity_trans.counts.matrix --samples_file samples.txt --method edgeR --output edgeR", "$checkpoints_dir/run.edgeR.ok");
@@ -293,7 +293,7 @@ if ($AUTO_MODE) {
 
 &change_dir("../", "$checkpoints_dir/cd_back_to_wd_after_edgeR.ok");
 
-&process_cmd("$TRINITY_HOME/Analysis/DifferentialExpression/run_DE_analysis.pl --matrix Trinity_genes.counts.matrix --samples_file samples.txt  --method edgeR --output edgeR_gene", "$checkpoints_dir/gene_DE_analysis.ok");
+&process_cmd("$trinity_dir/Analysis/DifferentialExpression/run_DE_analysis.pl --matrix Trinity_genes.counts.matrix --samples_file samples.txt  --method edgeR --output edgeR_gene", "$checkpoints_dir/gene_DE_analysis.ok");
 
 &process_cmd("ls -ltr edgeR_gene/", "$checkpoints_dir/ls_edgeR_gene_dir.ok");
 
@@ -337,9 +337,9 @@ if ($AUTO_MODE) {
 
 # load in the gene results
 
-&process_cmd("$TRINOTATE_HOME/util/transcript_expression/import_expression_and_DE_results.pl  --sqlite ../Trinotate.sqlite --component_mode  --samples_file ../samples.txt --count_matrix ../Trinity_genes.counts.matrix --fpkm_matrix ../Trinity_genes.TMM.EXPR.matrix", "$checkpoints_dir/Trinotate.load_gene_expr_data.ok");
+&process_cmd("$trinotate_dir/util/transcript_expression/import_expression_and_DE_results.pl  --sqlite ../Trinotate.sqlite --component_mode  --samples_file ../samples.txt --count_matrix ../Trinity_genes.counts.matrix --fpkm_matrix ../Trinity_genes.TMM.EXPR.matrix", "$checkpoints_dir/Trinotate.load_gene_expr_data.ok");
 
-&process_cmd("$TRINOTATE_HOME/util/transcript_expression/import_expression_and_DE_results.pl --sqlite ../Trinotate.sqlite --component_mode  --samples_file ../samples.txt --DE_dir ../edgeR_gene ", "$checkpoints_dir/Trinotate.load_gene_DE_data.ok");
+&process_cmd("$trinotate_dir/util/transcript_expression/import_expression_and_DE_results.pl --sqlite ../Trinotate.sqlite --component_mode  --samples_file ../samples.txt --DE_dir ../edgeR_gene ", "$checkpoints_dir/Trinotate.load_gene_DE_data.ok");
 
 
 print STDERR "\n\n\tCommand-line Demo complete.  Congratulations! :)  Now explore your data via TrinotateWeb\n\n\n\n";
