@@ -39,10 +39,11 @@ foreach my $file (<*>) {
 `rm -rf ./wt_*`;
 `rm -rf ./GSNO_*`;
 `rm -rf ./trinity_out_dir`;
-`rm -rf ./edgeR`;
+`rm -rf ./edgeR_gene`;
+`rm -rf ./edgeR_trans`;
 `rm -rf ./__TrinDemo_checkpoints_dir`;
 `rm -rf ./Trinotate`;
-
+`rm -rf ./bowtie_out`;
 `rm -f ./data/*fastq`;
 `rm -f ./data/*readcount`;
 
