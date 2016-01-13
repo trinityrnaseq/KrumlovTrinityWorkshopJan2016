@@ -262,7 +262,7 @@ if ($AUTO_MODE) {
 &process_cmd("cat -te samples.txt", "$checkpoints_dir/example_samples_txt_cat_te.ok");
 
 ## run edgeR
-&process_cmd("$trinity_dir/Analysis/DifferentialExpression/run_DE_analysis.pl --matrix Trinity_trans.counts.matrix --samples_file samples.txt --method edgeR --output edgeR", "$checkpoints_dir/run.edgeR.ok");
+&process_cmd("$trinity_dir/Analysis/DifferentialExpression/run_DE_analysis.pl --matrix Trinity_trans.counts.matrix --samples_file samples.txt --method edgeR --output edgeR_trans", "$checkpoints_dir/run.edgeR_trans.ok");
 
 # take a look at what edgeR generated:
 &process_cmd("ls -ltr edgeR_trans/", "$checkpoints_dir/ls.edgeR_trans.dir.ok");
@@ -270,7 +270,7 @@ if ($AUTO_MODE) {
 
 &process_cmd("head edgeR_trans/Trinity_trans.counts.matrix.GSNO_vs_WT.edgeR.DE_results", "$checkpoints_dir/head.edgeR_trans.DE_results.ok");
 
-&show("edge_transR/Trinity_trans.counts.matrix.GSNO_vs_WT.edgeR.DE_results.MA_n_Volcano.pdf");
+&show("edge_trans/Trinity_trans.counts.matrix.GSNO_vs_WT.edgeR.DE_results.MA_n_Volcano.pdf");
 
 &change_dir("edgeR_trans", "$checkpoints_dir/cd.edgeR.ok");
 
@@ -300,7 +300,7 @@ if ($AUTO_MODE) {
 ## Time now for Trinotate
 #########################
 
-&run_cmd("pwd", "$checkpoints_dir/ensure_pwd_pre_Trinotate.ok");
+&process_cmd("pwd", "$checkpoints_dir/ensure_pwd_pre_Trinotate.ok");
 
 
 &run_Trinotate_demo(); # cd's into Trinotate
