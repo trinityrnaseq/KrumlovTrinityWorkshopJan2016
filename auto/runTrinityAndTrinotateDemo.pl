@@ -127,7 +127,7 @@ my ($left_fq_files_aref, $right_fq_files_aref) = &get_fq_files_listings(%samples
 my $run_Trinity_cmd = "$trinity_dir/Trinity --seqType fq "
     . " --left " . join(",", @$left_fq_files_aref)
     . " --right " . join(",", @$right_fq_files_aref) 
-    . " --CPU 4 --max_memory 2G --min_contig_length 150 "; 
+    . " --CPU 2 --max_memory 2G --min_contig_length 150 "; 
 
 
 &process_cmd($run_Trinity_cmd, "$checkpoints_dir/trinity.ok");
